@@ -36,35 +36,6 @@ We created a **universal Python data-preparation engine** that:
 
 ---
 
-## 📂 Project Structure  
-
-SpaceInvaders-NASASpaceApps/
-│
-├── Code/
-│ ├── Prepare_All_Combined.py ← Unified data-prep script (main entry)
-│ ├── CumulativeDataAnlysis/… ← Kepler (KOI) processing
-│ ├── K2DataAnlysis/… ← K2 data prep utilities
-│ └── TOIDataAnlysis/… ← TESS (TOI) data prep utilities
-│
-├── Data/
-│ ├── cumulative_2025.10.04_09.06.58.csv
-│ ├── TOI_2025.10.04_09.07.03.csv
-│ └── k2pandc_2025.10.04_09.07.07.csv
-│
-└── Processed/
-├── Combined/
-│ ├── X_train.npy
-│ ├── y_train.npy
-│ ├── X_test.npy
-│ ├── feature_metadata.json
-│ └── …
-└── (per-mission subfolders)
-
-yaml
-Copy code
-
----
-
 ## 🧩 Key Features  
 
 - **Universal Loader** – Handles any NASA-style CSV (auto-detects delimiter, ignores metadata lines).  
@@ -75,14 +46,11 @@ Copy code
 
 ---
 
-## 🧠 Recommended ML Models  
+## 🧠 ML Models  
 
 | Model | Library | Why Use It |
 |:------|:---------|:-----------|
 | **XGBoost** | `xgboost` | Best accuracy for tabular NASA data |
-| **LightGBM** | `lightgbm` | Fast & memory-efficient |
-| **Random Forest** | `scikit-learn` | Interpretable baseline |
-| **Neural Network (MLP)** | `tensorflow` / `torch` | For non-linear astrophysical patterns |
 
 ---
 
@@ -115,10 +83,11 @@ Add NASA Exoplanet Archive API fetcher for live data updates.
 
 🧑‍💻 Team Roles
 Member	Role	Focus
-Shamliki Sharma	Lead Developer	Data pipeline, ML integration
-[Teammate 2]	Data Scientist	Feature engineering & analysis
-[Teammate 3]	Frontend Engineer	3D map & visualization UI
-[Teammate 4]	Research Lead	Dataset curation & validation
+Arjun Sharma	Developer	Data pipeline, ML integration
+Krish Daryani	Data Scientist	Feature engineering & analysis
+Avinash Kumar	Frontend Engineer	3D map & visualization UI
+Adrian Muller	Developer	Data pipeline, ML integration
+Adiya Stastry Buisness 
 
 🛰️ Datasets Used
 Kepler Exoplanet Cumulative Table — NASA Exoplanet Archive
