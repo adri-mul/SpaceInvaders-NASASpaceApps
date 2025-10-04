@@ -1,6 +1,6 @@
-# 🌌 Space Invaders — AI-Powered Exoplanet Discovery 🌌
+# 🌌 Space Invaders — AI-Powered Exoplanet Discovery
 
-## 🚀 NASA Space Apps Challenge 2025  
+## 🚀 NASA Space Apps Challenge 2025 🚀
 **Team:** Space Invaders  
 **Theme:** Exoplanet Exploration & Detection using AI/ML  
 
@@ -112,3 +112,4 @@ ________________________________________________________________________________
 — Carl Sagan
 
 _*Generative AI was used to formulate the base of this README._
+
