@@ -1,0 +1,36 @@
+{
+  "feature_cols": [
+    "period_days",
+    "duration_hours",
+    "depth_ppm",
+    "prad_re",
+    "teff_k",
+    "logg_cgs",
+    "srad_rsun",
+    "fpflag_nt",
+    "fpflag_ss",
+    "fpflag_co",
+    "fpflag_ec"
+  ],
+  "label_map": {
+    "APC": 0,
+    "CANDIDATE": 1,
+    "CONFIRMEDED": 2,
+    "CP": 3,
+    "FA": 4,
+    "FALSE POSITIVE": 5,
+    "FP": 6,
+    "KP": 7,
+    "PC": 8,
+    "REFUTED": 9
+  },
+  "sources_used": [
+    "KOI",
+    "TOI",
+    "K2"
+  ],
+  "split": {
+    "test_size": 0.2,
+    "random_state": 42
+  }
+}
