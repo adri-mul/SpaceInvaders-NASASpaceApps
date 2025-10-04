@@ -1,166 +1,56 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import starsDataRaw from "./stars.json";
+import starsData from "./stars.json";
 
-export default function SpaceMap3D() {
-  const [selectedStar, setSelectedStar] = useState(null);
-  const [starInfoCache, setStarInfoCache] = useState({});
-  const [loadingInfo, setLoadingInfo] = useState(null);
-  const [cameraZoom, setCameraZoom] = useState(12);
-
-  // Convert starsDataRaw to include positions and a "brightness" proxy
-  const starsData = useMemo(() => {
-    return starsDataRaw.map((s, i) => ({
-      ...s,
-      id: `${s.source}-${s.id}`,
-      position: [
-        (Math.random() - 0.5) * 200,
-        (Math.random() - 0.5) * 200,
-        (Math.random() - 0.5) * 200,
-      ],
-      brightness: Math.random(), // simple proxy; could be radius or magnitude
-    }));
-  }, []);
-
-  // Compute which stars are currently "in view" and pick top 1000 brightest
-  const visibleStars = useMemo(() => {
-    const { camera } = { camera: { position: [0, 0, cameraZoom] } }; // placeholder
-    // For simplicity, pick top 1000 brightest globally
-    return [...starsData]
-      .sort((a, b) => b.brightness - a.brightness)
-      .slice(0, 1000);
-  }, [starsData, cameraZoom]);
-
-  // SerpAPI fetch for star description
-  const fetchStarInfo = async (star) => {
-    if (starInfoCache[star.id]?.description) return;
-    setLoadingInfo(star.id);
-    try {
-      const res = await fetch(`/api/starinfo?q=${encodeURIComponent(star.search_query)}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const next = { ...starInfoCache, [star.id]: data };
-      setStarInfoCache(next);
-      localStorage.setItem("starinfo-cache", JSON.stringify(next));
-    } catch {
-      const next = {
-        ...starInfoCache,
-        [star.id]: { title: star.display, description: "No description found", url: null },
-      };
-      setStarInfoCache(next);
-      localStorage.setItem("starinfo-cache", JSON.stringify(next));
-    } finally {
-      setLoadingInfo(null);
-    }
-  };
-
-  return (
-    <div className="w-full h-screen bg-black relative">
-      <Canvas camera={{ position: [0, 0, cameraZoom], fov: 55 }}>
-        <color attach="background" args={["#000"]} />
-        <BasicControls cameraZoom={cameraZoom} setCameraZoom={setCameraZoom} />
-
-        <group>
-          {visibleStars.map((star) => (
-            <Planet
-              key={star.id}
-              star={star}
-              onClick={() => {
-                setSelectedStar(star);
-                fetchStarInfo(star);
-              }}
-            />
-          ))}
-        </group>
-      </Canvas>
-
-      {selectedStar && (
-        <div className="absolute bottom-4 left-4 bg-white/10 text-black p-4 rounded-xl max-w-sm">
-          <div className="font-semibold">{selectedStar.display}</div>
-          <div className="text-sm mt-1">
-            {starInfoCache[selectedStar.id]?.description ||
-              "Loading description…"}
-          </div>
-          {starInfoCache[selectedStar.id]?.url && (
-            <a
-              href={starInfoCache[selectedStar.id].url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-blue-500 underline text-xs"
-            >
-              Learn more
-            </a>
-          )}
-          <button
-            className="mt-2 px-2 py-1 bg-white/20 rounded"
-            onClick={() => setSelectedStar(null)}
-          >
-            Close
-          </button>
-        </div>
-      )}
-    </div>
-  );
+function sphericalToXYZ(radius, theta, phi) {
+  return [
+    radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta),
+  ];
 }
 
-function Planet({ star, onClick }) {
+function Star({ star, onClick }) {
   const ref = useRef();
-  useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.y += dt * 0.1;
+  useFrame(() => {
+    if (ref.current) ref.current.rotation.y += 0.001;
   });
-  const color = `hsl(${star.brightness * 60}, 100%, 50%)`; // color based on brightness/heat
-  const radius = 0.5 + star.brightness * 1.5;
-
   return (
-    <mesh ref={ref} position={star.position} onClick={onClick}>
-      <sphereGeometry args={[radius, 16, 16]} />
-      <meshBasicMaterial color={color} />
+    <mesh ref={ref} position={star.position} onClick={() => onClick(star)} scale={[2, 2, 2]}>
+      <sphereGeometry args={[0.8, 24, 24]} />
+      <meshBasicMaterial color={star.color} />
     </mesh>
   );
 }
 
-// Simple orbit-style controls
-function BasicControls({ cameraZoom, setCameraZoom }) {
+function Controls({ radiusRef, defaultSpherical }) {
   const { camera, gl } = useThree();
-  const spherical = useRef(new THREE.Spherical(cameraZoom, Math.PI / 3, 0));
-  const isDragging = useRef(false);
+  const spherical = useRef(defaultSpherical);
+  const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
 
   useFrame(() => {
     const pos = new THREE.Vector3().setFromSpherical(spherical.current);
-    camera.position.lerp(pos, 0.1);
+    camera.position.lerp(pos, 0.2);
     camera.lookAt(0, 0, 0);
   });
 
   useEffect(() => {
     const el = gl.domElement;
-    const onDown = (e) => {
-      isDragging.current = true;
-      last.current = { x: e.clientX, y: e.clientY };
-    };
+    const onDown = (e) => { dragging.current = true; last.current = { x: e.clientX, y: e.clientY }; };
     const onMove = (e) => {
-      if (!isDragging.current) return;
+      if (!dragging.current) return;
       const dx = e.clientX - last.current.x;
       const dy = e.clientY - last.current.y;
       last.current = { x: e.clientX, y: e.clientY };
       spherical.current.theta -= dx * 0.005;
-      spherical.current.phi = THREE.MathUtils.clamp(
-        spherical.current.phi + dy * 0.005,
-        0.1,
-        Math.PI - 0.1
-      );
+      spherical.current.phi = THREE.MathUtils.clamp(spherical.current.phi + dy * 0.005, 0.1, Math.PI - 0.1);
     };
-    const onUp = () => {
-      isDragging.current = false;
-    };
+    const onUp = () => (dragging.current = false);
     const onWheel = (e) => {
-      spherical.current.radius = THREE.MathUtils.clamp(
-        spherical.current.radius + e.deltaY * 0.01,
-        5,
-        60
-      );
-      setCameraZoom(spherical.current.radius);
+      spherical.current.radius = THREE.MathUtils.clamp(spherical.current.radius + e.deltaY * 0.1, 15, 200);
+      radiusRef.current = spherical.current.radius;
     };
 
     el.addEventListener("pointerdown", onDown);
@@ -174,7 +64,97 @@ function BasicControls({ cameraZoom, setCameraZoom }) {
       window.removeEventListener("pointerup", onUp);
       el.removeEventListener("wheel", onWheel);
     };
-  }, [gl, setCameraZoom]);
+  }, [gl, radiusRef]);
 
   return null;
+}
+
+export default function SpaceMap3D() {
+  const [activeStar, setActiveStar] = useState(null);
+  const [starInfo, setStarInfo] = useState({});
+  const [loading, setLoading] = useState(null);
+  const radiusRef = useRef(50);
+  const defaultSpherical = new THREE.Spherical(radiusRef.current, Math.PI / 2, 0);
+
+  const stars = useMemo(() => {
+    return starsData.slice(0, 1000).map((s) => {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const radius = 40 + Math.random() * 60;
+      const position = sphericalToXYZ(radius, theta, phi);
+      const color = `hsl(${Math.random() * 360}, 80%, 60%)`;
+      return { ...s, position, color };
+    });
+  }, []);
+
+  const fetchStarInfo = async (star) => {
+    if (starInfo[star.display]?.description) return;
+    setLoading(star.display);
+    try {
+      const r = await fetch(`/api/starinfo?q=${encodeURIComponent(star.search_query)}`);
+      const data = await r.json();
+      const description = data.description || `Search for "${star.display}" online.`;
+      setStarInfo((prev) => ({ ...prev, [star.display]: { ...data, description } }));
+    } catch {
+      setStarInfo((prev) => ({
+        ...prev,
+        [star.display]: { title: star.display, description: `Search for "${star.display}" online.`, url: null },
+      }));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const centerView = () => {
+    defaultSpherical.radius = 50;
+    defaultSpherical.theta = Math.PI / 2;
+    defaultSpherical.phi = 0;
+    radiusRef.current = defaultSpherical.radius;
+  };
+
+  return (
+    <div className="w-full h-screen relative bg-black text-white">
+      <Canvas camera={{ position: [0, 0, radiusRef.current], fov: 70 }}>
+        <color attach="background" args={["#000"]} />
+        <Controls radiusRef={radiusRef} defaultSpherical={defaultSpherical} />
+        {stars.map((s, i) => (
+          <Star key={i} star={s} onClick={(star) => { setActiveStar(star); fetchStarInfo(star); }} />
+        ))}
+      </Canvas>
+
+      {/* Center Button */}
+      <button
+        onClick={centerView}
+        className="absolute top-4 left-4 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg z-20"
+      >
+        Center
+      </button>
+
+      {/* Star Info Popup (always top-left HUD) */}
+      {activeStar && (
+        <div className="absolute top-16 left-4 w-96 p-4 bg-black/90 text-white rounded-xl border border-white/20 shadow-lg z-20">
+          <div className="font-bold text-lg">{activeStar.display}</div>
+          <div className="mt-2 text-sm">
+            {starInfo[activeStar.display]?.description || (loading === activeStar.display ? "Loading…" : "Fetching info…")}
+          </div>
+          {starInfo[activeStar.display]?.url && (
+            <a
+              href={starInfo[activeStar.display].url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-300 underline text-xs mt-1 inline-block"
+            >
+              Learn more
+            </a>
+          )}
+          <button
+            onClick={() => setActiveStar(null)}
+            className="mt-3 px-3 py-1 text-xs bg-white/10 rounded hover:bg-white/20"
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
