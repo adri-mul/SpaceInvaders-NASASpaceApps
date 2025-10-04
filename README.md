@@ -82,7 +82,7 @@ Build an interactive 3D space map (React + Three.js) to visualize exoplanet loca
 Add NASA Exoplanet Archive API fetcher for live data updates.
 ```
 
-## Contributions and Thanks
+## 🙏 Contributions and Thanks!
 
 ### 🧑‍💻 Team Roles
 **Member	Role	Focus**
@@ -106,7 +106,9 @@ MIT License — Free for research and educational use.
 Special thanks to NASA, Caltech IPAC, and the Space Apps organizers for open-data access and community support.
 AND OF COURSE, CHATGPT!!!! 🤖🤖
 
-_“Somewhere, something incredible is waiting to be known.”_
+_______________________________________________________________________________________
+
+**_“Somewhere, something incredible is waiting to be known.”_**
 — Carl Sagan
 
-*Generative AI was used to formulate the base of this README.
+_*Generative AI was used to formulate the base of this README._
