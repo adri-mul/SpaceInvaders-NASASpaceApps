@@ -104,11 +104,11 @@ MIT License — Free for research and educational use.
 
 ## ✨ Acknowledgments
 Special thanks to NASA, Caltech IPAC, and the Space Apps organizers for open-data access and community support.
-AND OF COURSE, CHATGPT!!!! 🤖🤖
+AND OF COURSE, THE BRILLIANT CHATGPT!!!! 🤖🤖🫡
 
 _______________________________________________________________________________________
 
-**_“Somewhere, something incredible is waiting to be known.”_**
+**“Somewhere, something incredible is waiting to be known.”**
 — Carl Sagan
 
 _*Generative AI was used to formulate the base of this README._
