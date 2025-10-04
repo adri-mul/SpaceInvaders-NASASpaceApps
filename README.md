@@ -80,30 +80,33 @@ Integrate real-time training using XGBoost.
 Build an interactive 3D space map (React + Three.js) to visualize exoplanet locations.
 
 Add NASA Exoplanet Archive API fetcher for live data updates.
+```
 
-🧑‍💻 Team Roles
-Member	Role	Focus
-Arjun Sharma	Developer	Data pipeline, ML integration
-Krish Daryani	Data Scientist	Feature engineering & analysis
-Avinash Kumar	Frontend Engineer	3D map & visualization UI
-Adrian Muller	Developer	Data pipeline, ML integration
-Adiya Stastry Buisness 
+## Contributions and Thanks
 
-🛰️ Datasets Used
+### 🧑‍💻 Team Roles
+**Member	Role	Focus**
+Arjun Sharma	_Developer,	Data pipeline, ML integration_
+Krish Daryani	_Data Scientist,	Feature engineering & analysis_
+Avinash Kumar	_Frontend Engineer,	3D map & visualization UI_
+Adrian Muller	_Developer,	Data pipeline, ML integration_
+Adya Sastry _Business, Research, Misc_
+
+### 🛰️ Datasets Used
+K2 Planet Candidates and Confirmed Planets — NASA Exoplanet Archive
+
 Kepler Exoplanet Cumulative Table — NASA Exoplanet Archive
 
 TESS Objects of Interest (TOI) — NASA MAST
 
-K2 Planet Candidates and Confirmed Planets — NASA Exoplanet Archive
-
-📜 License
+### 📜 License
 MIT License — Free for research and educational use.
 
-✨ Acknowledgments
+## ✨ Acknowledgments
 Special thanks to NASA, Caltech IPAC, and the Space Apps organizers for open-data access and community support.
-AND OF COURSE CHATGPT!!!! 🤖
+AND OF COURSE, CHATGPT!!!! 🤖🤖
 
-“Somewhere, something incredible is waiting to be known.”
+_“Somewhere, something incredible is waiting to be known.”_
 — Carl Sagan
 
-Generative AI was used to make this README.
+*Generative AI was used to formulate the base of this README.
