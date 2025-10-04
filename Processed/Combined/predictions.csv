@@ -1,0 +1,2 @@
+period_days,duration_hours,depth_ppm,prad_re,teff_k,logg_cgs,srad_rsun,fpflag_nt,fpflag_ss,fpflag_co,fpflag_ec,Predicted_Label,Prob_APC,Prob_CANDIDATE,Prob_CONFIRMEDED,Prob_CP,Prob_FA,Prob_FALSE_POSITIVE,Prob_FP,Prob_KP,Prob_PC,Prob_REFUTED
+0,0,0,0,0,0,0,0,0,0,0,CANDIDATE,0.005189218,0.8622508,0.023688685,0.006071835,0.013203028,0.034721974,0.0019645933,0.00016411683,0.052649103,9.657883e-05
