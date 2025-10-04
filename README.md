@@ -1,4 +1,4 @@
-# 🌌 Space Invaders — AI-Powered Exoplanet Discovery  
+# 🌌 Space Invaders — AI-Powered Exoplanet Discovery 🌌
 
 ## 🚀 NASA Space Apps Challenge 2025  
 **Team:** Space Invaders  
