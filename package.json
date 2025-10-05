@@ -1,6 +1,7 @@
 {
   "name": "space-invaders-nasa",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@react-three/drei": "^10.7.6",
