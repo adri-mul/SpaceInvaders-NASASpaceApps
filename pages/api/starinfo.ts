@@ -1,7 +1,7 @@
 // pages/api/starinfo.ts
-import type { NextApiRequest, NextApiResponse } from "next";
+//import type { NextApiRequest, NextApiResponse } from "next";
 
-type StarInfo = {
+/*type StarInfo = {
   title: string;
   description: string;
   url: string | null;
@@ -54,4 +54,4 @@ export default async function handler(
     if (error instanceof Error) message = error.message;
     res.status(500).json({ error: message });
   }
-}
+}*/

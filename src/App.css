@@ -1,0 +1,13 @@
+/* App.css - minimal styling */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #111;
+  color: #eee;
+}
+
+button {
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 14px;
+}

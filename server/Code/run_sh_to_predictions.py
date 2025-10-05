@@ -2,18 +2,11 @@
 """
 Space Invaders — SH -> FITS -> Features -> Predictions (No-CLI, Click-to-Run)
 
-Save as:
-    Code/run_sh_to_predictions.py
+Saves ALL outputs under ../../src (relative to THIS file), in a subfolder
+named after the chosen .sh file. The user still chooses the .sh path freely.
 
-What it does:
-- Lets you choose a TESS *.sh* bulk-download script (e.g., tesscurl_sector_96_lc.sh)
-- Parses URLs, downloads up to MAX_FILES FITS light curves
-- Extracts features (period, duration, depth, snr) via BLS
-- Adds optional stellar context if present (Teff, logg, R*, M*)
-- Auto-aligns feature names to your trained model's expected columns
-- Outputs CSV + JSON with predictions for your React app
-
-Outputs (next to the *.sh*):
+Outputs (inside ../../src/<sh_name>/):
+- <sh_name>_fits/                 (downloaded FITS files)
 - <sh_name>_features.csv
 - <sh_name>_predictions.csv
 - <sh_name>_predictions.json
@@ -21,17 +14,11 @@ Outputs (next to the *.sh*):
 
 import os
 import re
-import sys
 import json
-import math
-import time
 import joblib
 import shutil
-import signal
-import zipfile
 import requests
 import warnings
-import tempfile
 from typing import List, Tuple, Dict, Optional
 
 import numpy as np
@@ -55,10 +42,18 @@ BLS_MIN_P = 0.5               # days
 BLS_MAX_P = 30.0              # days
 BLS_COARSE = 1000             # coarse grid steps
 BLS_FINE   = 300              # fine grid steps around best peak
+
+# Default trained model path (optional; if missing, file picker will prompt)
 DEFAULT_MODEL_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)),
     "Processed", "LC_Model_Pro", "lightcurve_model.pkl"
 )
+
+# NEW: Force all outputs to ../../src relative to THIS script
+OUTPUT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "src")
+)
+os.makedirs(OUTPUT_ROOT, exist_ok=True)
 
 # ------------------------------
 # Helpers
@@ -87,10 +82,8 @@ def parse_sh_to_urls(sh_path: str) -> List[str]:
         for line in f:
             line = line.strip()
             if "https://" in line:
-                # tolerate quotes & spaces
                 found = re.findall(r"https://\S+", line)
                 for u in found:
-                    # trim trailing punctuation
                     u = u.strip('\'" )(').rstrip("\\")
                     urls.append(u)
     urls = [u for u in urls if u.lower().endswith((".fits", ".fits.gz"))]
@@ -122,18 +115,14 @@ def load_time_flux_from_fits(path: str) -> Tuple[np.ndarray, np.ndarray, Dict]:
     try:
         lkobj = lk.open(path)  # LightCurve or LightCurveFile
         # Get a LightCurve
-        if hasattr(lkobj, "to_lightcurve"):
-            lc = lkobj.to_lightcurve()
-        else:
-            lc = lkobj  # already a LightCurve
+        lc = lkobj.to_lightcurve() if hasattr(lkobj, "to_lightcurve") else lkobj
 
         # Prefer PDCSAP if present; fallback to whatever the LC has
         cols = [c.lower() for c in (lc.columns() if hasattr(lc, "columns") else [])]
         if "pdcsap_flux" in cols:
             pass
         elif hasattr(lkobj, "PDCSAP_FLUX") and lkobj.PDCSAP_FLUX is not None:
-            # older lightkurve
-            lc = lkobj.PDCSAP_FLUX
+            lc = lkobj.PDCSAP_FLUX  # older lightkurve
 
         # Clean & normalize
         lc = lc.remove_nans().remove_outliers(sigma=6.0).normalize(unit="relative")
@@ -171,9 +160,7 @@ def load_time_flux_from_fits(path: str) -> Tuple[np.ndarray, np.ndarray, Dict]:
 def bls_features(time: np.ndarray, flux: np.ndarray,
                  pmin=BLS_MIN_P, pmax=BLS_MAX_P,
                  coarse=BLS_COARSE, fine=BLS_FINE) -> Tuple[float, float, float, float]:
-    """
-    Compute BLS and return (period_days, duration_hours, depth_ppm, snr).
-    """
+    """Compute BLS and return (period_days, duration_hours, depth_ppm, snr)."""
     mask = np.isfinite(time) & np.isfinite(flux)
     t = time[mask]
     y = flux[mask]
@@ -204,13 +191,9 @@ def bls_features(time: np.ndarray, flux: np.ndarray,
     return period, duration_h, depth_ppm, snr
 
 def stellar_meta_from_header(meta: Dict) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
-    """
-    Try to extract basic stellar params if available.
-    Returns (Teff[K], logg[cgs], R*[Rsun], M*[Msun]) or (None,...)
-    """
+    """Try to extract (Teff, logg, R*, M*) if available."""
     if meta is None:
         return None, None, None, None
-    # Common header keys in MAST products
     teff = meta.get("TEFF", meta.get("TEFFVAL", None))
     logg = meta.get("LOGG", meta.get("LOGGVAL", None))
     rstar = meta.get("RADIUS", meta.get("RSTAR", None))
@@ -234,8 +217,7 @@ def identify_target_from_path(path: str) -> str:
 def estimate_radius_re(depth_ppm: float, star_rad_rsun: Optional[float]) -> Optional[float]:
     """
     Approximate planet radius (Earth radii) from transit depth (ppm) and stellar radius (Rsun).
-    Rp/Rs ~ sqrt(depth); Rp(Rearth) ~ sqrt(depth) * Rsun/R_earth
-    1 Rsun ≈ 109.1 R_earth
+    Rp/Rs ~ sqrt(depth); Rp(Rearth) ~ sqrt(depth) * Rsun/R_earth (1 Rsun ≈ 109.1 Re)
     """
     if depth_ppm is None or not np.isfinite(depth_ppm):
         return None
@@ -247,10 +229,7 @@ def estimate_radius_re(depth_ppm: float, star_rad_rsun: Optional[float]) -> Opti
     return float(np.sqrt(depth_frac) * star_rad_rsun * 109.1)
 
 def estimate_semimajor_axis_au(period_days: float, star_mass_msun: Optional[float]) -> Optional[float]:
-    """
-    Kepler's third law (approx):
-    a(AU) ~ ( Mstar * (P_year)^2 )^(1/3), with P_year = P_days / 365.25
-    """
+    """Kepler's third law (approx): a(AU) ~ ( Mstar * (P_year)^2 )^(1/3)."""
     if period_days is None or not np.isfinite(period_days):
         return None
     if star_mass_msun is None or not np.isfinite(star_mass_msun):
@@ -276,7 +255,7 @@ def build_feature_row(ident: str, meta: Dict,
         "star_rad_rsun": rstar if rstar is not None else np.nan,
         "star_mass_msun": mstar if mstar is not None else np.nan,
 
-        # short names that many of your models expect
+        # short names (some models use these)
         "period": p,
         "duration": dur_h,
         "depth": depth_ppm,
@@ -303,12 +282,10 @@ def predict_df(model, df_feats: pd.DataFrame) -> pd.DataFrame:
     if "duration" not in df.columns and "duration_hours" in df.columns:
         df["duration"] = df["duration_hours"]
     if "depth" not in df.columns and "depth_ppm" in df.columns:
-        # If your model was trained on fractional depth use: df["depth"] = df["depth_ppm"]/1e6
         df["depth"] = df["depth_ppm"]
 
     expected = getattr(model, "feature_names_in_", None)
     if expected is None:
-        # Fall back to short set used in earlier LC models
         expected = np.array(["period", "duration", "depth", "snr"])
 
     missing = [c for c in expected if c not in df.columns]
@@ -348,9 +325,12 @@ def process_sh_to_predictions(sh_path: str,
     - extract features
     - load model, score, save CSV/JSON
     Returns (features_csv, predictions_csv, predictions_json)
+
+    NOTE: All outputs go under OUTPUT_ROOT/<sh_basename>/
     """
-    base_dir = os.path.dirname(sh_path)
-    base_name = os.path.splitext(os.path.basename(sh_path))[0]
+    sh_base = os.path.splitext(os.path.basename(sh_path))[0]
+    base_dir = os.path.join(OUTPUT_ROOT, sh_base)
+    ensure_dir(base_dir)
 
     print(f"🔎 Reading list: {os.path.basename(sh_path)}")
     urls = parse_sh_to_urls(sh_path)
@@ -358,8 +338,9 @@ def process_sh_to_predictions(sh_path: str,
         raise RuntimeError("No FITS URLs found in the .sh file.")
     urls = urls[:limit]
     print(f"🌐 {len(urls)} URLs to fetch/process")
+    print(f"📂 Output folder: {base_dir}")
 
-    dl_dir = os.path.join(base_dir, f"{base_name}_fits")
+    dl_dir = os.path.join(base_dir, f"{sh_base}_fits")
     ensure_dir(dl_dir)
 
     features = []
@@ -381,7 +362,7 @@ def process_sh_to_predictions(sh_path: str,
         raise RuntimeError("No usable light curves extracted; check the list or bounds.")
 
     df = pd.DataFrame(features)
-    feats_csv = os.path.join(base_dir, f"{base_name}_features.csv")
+    feats_csv = os.path.join(base_dir, f"{sh_base}_features.csv")
     df.to_csv(feats_csv, index=False)
     print(f"📝 Saved features -> {feats_csv}")
 
@@ -397,12 +378,12 @@ def process_sh_to_predictions(sh_path: str,
     pred_df = predict_df(model, df)
 
     # Save outputs
-    pred_csv = os.path.join(base_dir, f"{base_name}_predictions.csv")
+    pred_csv = os.path.join(base_dir, f"{sh_base}_predictions.csv")
     pred_df.to_csv(pred_csv, index=False)
     print(f"✅ Saved predictions CSV -> {pred_csv}")
 
     # React-friendly JSON (flat list of dicts)
-    json_path = os.path.join(base_dir, f"{base_name}_predictions.json")
+    json_path = os.path.join(base_dir, f"{sh_base}_predictions.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(pred_df.to_dict(orient="records"), f, ensure_ascii=False, indent=2)
     print(f"✅ Saved predictions JSON -> {json_path}")
