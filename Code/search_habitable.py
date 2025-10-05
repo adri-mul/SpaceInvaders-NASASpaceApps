@@ -36,7 +36,7 @@ def calculate_orbital_distance(orbital_period, stellar_mass):
 def calculate_planets_in_habitable_zone(planets):
     """
     Given a star's luminosity (in Solar units) and an iterable of planet rows (as
-    returned by csv.DictReader or a list of mapping-like objects), return a list
+    returned by csv.DictReader), return a list
     of planet rows that fall inside the habitable zone.
 
     This function is robust to CSV rows that provide:
@@ -66,29 +66,22 @@ def calculate_planets_in_habitable_zone(planets):
     habitable_planets = []
 
     for planet in planets:
-        # Use provided CSV header fields
-        # star_mass_msun, star_rad_rsun, teff_k, period_days, Est_SemiMajorAxis_AU
-        star_mass_msun = _to_float(planet.get('star_mass_msun'))
-        period_days = _to_float(planet.get('period_days'))
-        semi_major_axis_au = _to_float(planet.get('Est_SemiMajorAxis_AU'))
-        teff_k = _to_float(planet.get('teff_k'))
-        star_rad_rsun = _to_float(planet.get('star_rad_rsun'))
+        # For Kepler CSV: koi_period, koi_srad, koi_steff, koi_insol, koi_prad, etc.
+        period_days = _to_float(planet.get('koi_period'))
+        star_rad_rsun = _to_float(planet.get('koi_srad'))
+        teff_k = _to_float(planet.get('koi_steff'))
+        insolation = _to_float(planet.get('koi_insol'))
+        # Mass is not directly available, but can be estimated from radius if needed
         luminosity = None
 
         # Estimate luminosity if possible (L = 4 * pi * R^2 * sigma * T^4)
         if star_rad_rsun is not None and teff_k is not None:
-            # Convert radius from solar radii to meters
             R = star_rad_rsun * 6.957e8
             sigma = 5.670374419e-8
             luminosity = 4 * math.pi * R**2 * sigma * teff_k**4
-            # Convert to solar units
             luminosity /= 3.828e26
 
-        # If not, fallback to mass-luminosity relation if mass is available
-        if luminosity is None and star_mass_msun is not None:
-            luminosity = star_mass_msun ** 3.5
-
-        # If still not, skip planet
+        # If not, skip planet
         if luminosity is None:
             continue
 
@@ -96,10 +89,16 @@ def calculate_planets_in_habitable_zone(planets):
 
         # Determine orbital distance
         distance_au = None
-        if semi_major_axis_au is not None:
-            distance_au = semi_major_axis_au
-        elif period_days is not None and star_mass_msun is not None:
-            # Use Kepler's third law
+        # Prefer insolation if available
+        if insolation is not None and luminosity is not None and insolation > 0:
+            try:
+                distance_au = math.sqrt(luminosity / insolation)
+            except Exception:
+                distance_au = None
+        # Otherwise, use period and estimate mass from radius (roughly)
+        elif period_days is not None and star_rad_rsun is not None:
+            # Estimate mass from radius: M ~ R^0.8 (rough, for main sequence)
+            star_mass_msun = star_rad_rsun ** 0.8
             P = period_days * 86400.0
             M = star_mass_msun * sun_mass
             try:
@@ -111,7 +110,6 @@ def calculate_planets_in_habitable_zone(planets):
         if distance_au is None:
             continue
 
-        # Check if planet is in habitable zone
         if inner_hz <= distance_au <= outer_hz:
             row_copy = dict(planet)
             row_copy['computed_orbital_distance_au'] = distance_au
@@ -122,10 +120,11 @@ def calculate_planets_in_habitable_zone(planets):
     return json.dumps(habitable_planets, indent=2)
 
 def test_script():
-    FILE = "Data/demo_preds.csv"
+    FILE = "Data/cumulative_2025.10.04_09.06.58.csv"
     with open(FILE) as csvReader:
-        reader = csv.DictReader(csvReader)
+        filtered_lines = (line for line in csvReader if not line.lstrip().startswith('#'))
+        reader = csv.DictReader(filtered_lines)
         return calculate_planets_in_habitable_zone(reader)
 
 demo = test_script()
-print(demo)
+print(len(json.loads(demo)))
