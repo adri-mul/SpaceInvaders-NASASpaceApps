@@ -1,0 +1,24 @@
+{
+  "feature_cols": [
+    "koi_period",
+    "koi_duration",
+    "koi_depth",
+    "koi_impact",
+    "koi_prad",
+    "koi_teq",
+    "koi_insol",
+    "koi_model_snr",
+    "koi_steff",
+    "koi_slogg",
+    "koi_srad",
+    "koi_fpflag_nt",
+    "koi_fpflag_ss",
+    "koi_fpflag_co",
+    "koi_fpflag_ec"
+  ],
+  "label_map": {
+    "CONFIRMED": 1,
+    "CANDIDATE": 0,
+    "FALSE POSITIVE": -1
+  }
+}

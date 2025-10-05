@@ -1,0 +1,18 @@
+Space Invaders — KOI bulk scoring validation
+Source predictions: C:\Users\write\OneDrive\Documentos\GitHub\SpaceInvaders-NASASpaceApps\Predictions\koi_500_predictions.csv
+Rows: 500
+
+Prediction distribution (by Pred_Label):
+Pred_Label
+CONFIRMED    500
+
+Rows with truth labels: 500
+Label agreement rate (Pred vs koi_disposition): 0.000
+
+Confusion (rows per pair):
+ koi_disp_idx  pred_idx  count
+           -1         5    147
+            0         5     42
+            1         5    311
+
+Shortlist (Prob candidate >= 0.8): 0 rows
