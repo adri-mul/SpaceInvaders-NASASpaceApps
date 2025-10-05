@@ -5,9 +5,20 @@ import { OrbitControls, Stars as DreiStars } from "@react-three/drei";
 import * as THREE from "three";
 import starsData from "./stars.json";
 
-function ForegroundStar({ s, onClick }) {
+function ForegroundStar({ s, onClick, onHover }) {
   return (
-    <mesh position={s.position} onClick={(e) => { e.stopPropagation(); onClick(s); }}>
+    <mesh
+      position={s.position}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(s);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        onHover(s, e.clientX, e.clientY);
+      }}
+      onPointerOut={() => onHover(null)}
+    >
       <sphereGeometry args={[s.size, 16, 16]} />
       <meshStandardMaterial color={s.color} emissive={s.color} emissiveIntensity={0.25} />
     </mesh>
@@ -16,9 +27,11 @@ function ForegroundStar({ s, onClick }) {
 
 export default function SpaceMap3D({ maxStars = 400 }) {
   const [selected, setSelected] = useState(null);
+  const [hovered, setHovered] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const controlsRef = useRef();
 
-  // generate star positions/colors once
+  // distribute stars once
   const foregroundStars = useMemo(() => {
     const arr = [...starsData];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -57,6 +70,15 @@ export default function SpaceMap3D({ maxStars = 400 }) {
     setSelected(null);
   };
 
+  const handleHover = (star, x, y) => {
+    if (star) {
+      setHovered(star);
+      setMousePos({ x, y });
+    } else {
+      setHovered(null);
+    }
+  };
+
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#000" }}>
       {/* Center button */}
@@ -78,7 +100,7 @@ export default function SpaceMap3D({ maxStars = 400 }) {
         </button>
       </div>
 
-      {/* Info box overlay (fixed on screen) */}
+      {/* Info box when star is clicked */}
       {selected && (
         <div
           style={{
@@ -121,6 +143,27 @@ export default function SpaceMap3D({ maxStars = 400 }) {
         </div>
       )}
 
+      {/* Tooltip for hover */}
+      {hovered && (
+        <div
+          style={{
+            position: "absolute",
+            top: mousePos.y + 12,
+            left: mousePos.x + 12,
+            background: "rgba(0,0,0,0.75)",
+            color: "white",
+            padding: "6px 10px",
+            borderRadius: "6px",
+            fontSize: "14px",
+            pointerEvents: "none",
+            zIndex: 30,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {hovered.display}
+        </div>
+      )}
+
       {/* 3D canvas */}
       <Canvas camera={{ position: [0, 0, 220], fov: 60 }}>
         <DreiStars radius={400} depth={200} count={12000} factor={4} fade />
@@ -128,7 +171,7 @@ export default function SpaceMap3D({ maxStars = 400 }) {
         <directionalLight position={[50, 80, 50]} intensity={0.8} />
         <group>
           {foregroundStars.map((s) => (
-            <ForegroundStar key={s.id} s={s} onClick={setSelected} />
+            <ForegroundStar key={s.id} s={s} onClick={setSelected} onHover={handleHover} />
           ))}
         </group>
         <OrbitControls ref={controlsRef} enablePan enableZoom enableRotate />
